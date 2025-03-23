@@ -108,8 +108,8 @@ The application is deployed on:
 ## Data Storage
 - Main dataset (cleaned_noise_data.csv) stored using Git LFS
 - Data accessible through:
-  - GitHub LFS: https://github.com/SaraFarmahini/mainz-aircraft-noise-dashboard/tree/main
-  - DFKI GitLab LFS: https://git.opendfki.de/sara.farmahini/mainz-aircraft-noise-dashboard/-/tree/main
+  - GitHub LFS: https://github.com/SaraFarmahini/mainz-aircraft-noise-dashboard/tree/initial-code
+  - DFKI GitLab LFS: https://git.opendfki.de/sara.farmahini/mainz-aircraft-noise-dashboard/-/tree/initial-code
 - SharePoint integration for additional data storage
 
 ## Future Improvements
