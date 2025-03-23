@@ -106,8 +106,10 @@ The application is deployed on:
 3. DFKI GitLab repository: https://git.opendfki.de/sara.farmahini/mainz-aircraft-noise-dashboard
 
 ## Data Storage
-- Main dataset stored using Git LFS
-- Data accessible through both GitHub and DFKI GitLab
+- Main dataset (cleaned_noise_data.csv) stored using Git LFS
+- Data accessible through:
+  - GitHub LFS: https://github.com/SaraFarmahini/mainz-aircraft-noise-dashboard/tree/main
+  - DFKI GitLab LFS: https://git.opendfki.de/sara.farmahini/mainz-aircraft-noise-dashboard/-/tree/main
 - SharePoint integration for additional data storage
 
 ## Future Improvements
