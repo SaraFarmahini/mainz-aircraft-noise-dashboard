@@ -20,10 +20,9 @@ Data is provided by [Deutscher Fluglärmdienst e.V.](https://www.dfld.de/DFLDind
 
 The processed data file (`cleaned_noise_data.csv`) is stored on DFKI SharePoint. To access the data:
 
-1. Go to DFKI SharePoint
-2. Navigate to the project folder
-3. Download `cleaned_noise_data.csv`
-4. Place it in the same directory as the application files
+1. Go to [DFKI SharePoint - Sara - Hiwi Climate Health](https://dfkide.sharepoint.com/sites/Team_DSA_Research/Freigegebene%20Dokumente/Forms/AllItems.aspx?csf=1&web=1&e=XWpKoC&ovuser=61a9f1bd%2D7ea0%2D4068%2Db231%2Dbb4a6bfcb700%2Csafa01%40dfki%2Ede&OR=Teams%2DHL&CT=1740240883194&clickparams=eyJBcHBOYW1lIjoiVGVhbXMtRGVza3RvcCIsIkFwcFZlcnNpb24iOiI1MC8yNTAxMTYyNDMxOSIsIkhhc0ZlZGVyYXRlZFVzZXIiOmZhbHNlfQ%3D%3D&CID=d60984a1%2Df072%2D0000%2D4ab8%2D55b1f9a4ec8a&cidOR=SPO&FolderCTID=0x012000BF83EA91ED81D34A9516D434481BB75F&id=%2Fsites%2FTeam%5FDSA%5FResearch%2FFreigegebene%20Dokumente%2FPillar%20Spatiotemporal%2FProjects%2FSara%20%2D%20Hiwi%20Climate%20Health&viewid=4423b1fc%2D8f8c%2D46c9%2D9e7c%2D139a85d57b21)
+2. Download `cleaned_noise_data.csv`
+3. Place it in the same directory as the application files
 
 ## Setup
 
