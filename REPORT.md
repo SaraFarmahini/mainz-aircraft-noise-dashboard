@@ -21,10 +21,29 @@ The dashboard includes several interactive visualizations:
 - Hover information showing exact noise levels and timestamps
 
 #### Spatial Analysis
-- Interactive map showing all monitoring stations
-- Click-to-select station functionality
-- Station markers with popup information
-- Color-coded markers based on average noise levels
+The map implementation uses Folium library with the following features:
+- Base map centered on Mainz (49.9924° N, 8.2473° E)
+- Interactive markers for each monitoring station with precise coordinates:
+  - Mainz/Laubenheim 2 (49.9783° N, 8.2792° E)
+  - Mainz/Weisenau 2 (49.9850° N, 8.2850° E)
+  - Mainz/Oberstadt (49.9950° N, 8.2700° E)
+  - Mainz/Ebersheim (49.9200° N, 8.3200° E)
+  - Mainz/Hechtsheim 1 (49.9700° N, 8.2900° E)
+  - Mainz/Laubenheim (49.9783° N, 8.2792° E)
+  - Mainz/Bretzenheim (49.9600° N, 8.2600° E)
+  - University of Mainz (49.9900° N, 8.2700° E)
+  - Mainz/Hechtsheim 2 (49.9700° N, 8.2900° E)
+  - Mainz/Lerchenberg (49.9900° N, 8.2500° E)
+- Color-coded markers based on average noise levels:
+  - Green: < 60 dB
+  - Yellow: 60-70 dB
+  - Orange: 70-80 dB
+  - Red: > 80 dB
+- Click-to-select functionality with popup information showing:
+  - Station name
+  - Average noise level
+  - Number of measurements
+- Interactive selection that updates all visualizations
 
 #### Station Statistics
 - Key metrics for each station:
@@ -41,6 +60,36 @@ The dashboard includes several interactive visualizations:
 - Folium for map visualization
 - Pandas for data processing
 - Git LFS for large file storage
+
+## Implementation Details
+
+### Map Implementation
+1. Base Map Setup:
+   - Used Folium's Map class with OpenStreetMap tiles
+   - Set initial zoom level to 12 for Mainz city view
+   - Implemented custom CSS for better marker visibility
+
+2. Station Markers:
+   - Created custom marker icons with different colors
+   - Added popup information using HTML formatting
+   - Implemented click handlers for station selection
+   - Added hover effects for better user interaction
+
+3. Interactive Features:
+   - Real-time updates of all visualizations on station selection
+   - Smooth transitions between selected stations
+   - Responsive design that works on both desktop and mobile
+
+### Data Integration
+1. Station Data:
+   - Stored station coordinates in a Python dictionary
+   - Integrated with pandas DataFrame for data filtering
+   - Implemented efficient data loading with caching
+
+2. Performance Optimization:
+   - Used Streamlit's caching for data loading
+   - Implemented efficient data filtering
+   - Optimized map rendering for large datasets
 
 ## Deployment
 The application is deployed on:
