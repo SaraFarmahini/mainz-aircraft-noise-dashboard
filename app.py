@@ -166,26 +166,25 @@ def plot_station_heatmap(df, station):
     station_data['hour'] = station_data['datetime'].dt.hour
     station_data['day'] = station_data['datetime'].dt.day
     
-    heatmap_data = station_data.pivot_table(
-        values='db_a',
-        index='hour',
-        columns='day',
-        aggfunc='mean'
+    # Create heatmap
+    fig = px.density_heatmap(
+        station_data, 
+        x='day', 
+        y='hour',
+        title=f'Aircraft Noise Pattern by Hour and Day - {station}',
+        labels={'hour': 'Hour of Day', 'day': 'Day of Month'},
+        color_continuous_scale=['green', 'blue', 'yellow', 'purple']
     )
     
-    fig = go.Figure(data=go.Heatmap(
-        z=heatmap_data.values,
-        x=heatmap_data.columns,
-        y=heatmap_data.index,
-        colorscale='Viridis',
-        colorbar=dict(title='Aircraft Noise Level (dB)')
-    ))
-    
+    # Update y-axis to show 6-hour intervals
     fig.update_layout(
-        title=f'Aircraft Noise Pattern by Hour and Day - {station}',
-        xaxis_title='Day of Month',
-        yaxis_title='Hour of Day',
-        template='plotly_white'
+        yaxis=dict(
+            tickmode='array',
+            ticktext=['0:00', '6:00', '12:00', '18:00', '24:00'],
+            tickvals=[0, 6, 12, 18, 24],
+            title='Hour of Day'
+        ),
+        xaxis_title='Day of Month'
     )
     
     return fig
