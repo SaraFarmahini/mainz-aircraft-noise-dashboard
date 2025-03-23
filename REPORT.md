@@ -42,12 +42,8 @@ The map implementation uses Folium library with the following features:
 
 #### Heatmap Visualization
 - Created using Plotly's density heatmap
-- Shows noise level distribution across time periods
-- Color scale:
-  - Green: Lower noise levels
-  - Blue: Medium noise levels
-  - Yellow: Higher noise levels
-  - Purple: Highest noise levels
+- Shows noise level distribution across hours of the day (0-24) and days of the month
+- Shows patterns of aircraft activity and noise intensity
 - Interactive features:
   - Hover information showing exact values
   - Zoom and pan capabilities
