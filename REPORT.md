@@ -44,10 +44,10 @@ The map implementation uses Folium library with the following features:
 - Created using Plotly's density heatmap
 - Shows noise level distribution across time periods
 - Color scale:
-  - Blue: Lower noise levels
-  - Green: Medium noise levels
+  - Green: Lower noise levels
+  - Blue: Medium noise levels
   - Yellow: Higher noise levels
-  - Red: Highest noise levels
+  - Purple: Highest noise levels
 - Interactive features:
   - Hover information showing exact values
   - Zoom and pan capabilities
