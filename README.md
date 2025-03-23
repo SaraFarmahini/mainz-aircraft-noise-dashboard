@@ -16,14 +16,24 @@ This interactive dashboard visualizes aircraft noise monitoring data from variou
 
 Data is provided by [Deutscher Fluglärmdienst e.V.](https://www.dfld.de/DFLDindex.php?L=G)
 
+## Data Access
+
+The processed data file (`cleaned_noise_data.csv`) is stored on DFKI SharePoint. To access the data:
+
+1. Go to DFKI SharePoint
+2. Navigate to the project folder
+3. Download `cleaned_noise_data.csv`
+4. Place it in the same directory as the application files
+
 ## Setup
 
 1. Clone this repository
-2. Install dependencies:
+2. Download the data file from DFKI SharePoint (see Data Access section above)
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. Run the Streamlit app:
+4. Run the Streamlit app:
    ```bash
    streamlit run app.py
    ```
