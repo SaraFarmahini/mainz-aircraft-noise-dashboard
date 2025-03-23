@@ -27,7 +27,7 @@ STATION_COORDS = {
     'Mainz/Hechtsheim 1': (49.9700, 8.2900),
     'Mainz/Laubenheim': (49.9783, 8.2792),
     'Mainz/Bretzenheim': (49.9600, 8.2600),
-    'University of Mainz': (49.9900, 8.2700),  # Updated name
+    'University of Mainz': (49.9900, 8.2700),
     'Mainz/Hechtsheim 2': (49.9700, 8.2900),
     'Mainz/Lerchenberg': (49.9900, 8.2500)
 }
@@ -269,34 +269,16 @@ def main():
         if len(station_data) == 0:
             st.warning(f"No data available for {st.session_state.selected_station} between {date_range[0]} and {date_range[1]}")
         else:
-            # Analyze duplicates
-            duplicate_analysis = analyze_duplicates(df, st.session_state.selected_station)
-            
             stats = {
                 "Average Aircraft Noise": f"{station_data['db_a'].mean():.1f} dB",
                 "Maximum Aircraft Noise": f"{station_data['db_a'].max():.1f} dB",
                 "Minimum Aircraft Noise": f"{station_data['db_a'].min():.1f} dB",
                 "Total Records": f"{len(station_data):,}",
-                "Unique Timestamps": f"{len(station_data['datetime'].unique()):,}",
                 "Date Range": f"{station_data['datetime'].min().strftime('%Y-%m-%d')} to {station_data['datetime'].max().strftime('%Y-%m-%d')}"
             }
             
-            if duplicate_analysis:
-                stats["Timestamps with Multiple Measurements"] = f"{duplicate_analysis['total_duplicates']:,}"
-                stats["Maximum Measurements per Timestamp"] = f"{duplicate_analysis['max_duplicates']}"
-            
             for key, value in stats.items():
-                st.metric(key, value)
-            
-            # Show duplicate analysis if available
-            if duplicate_analysis:
-                st.subheader("Multiple Measurements Analysis")
-                st.write(f"This station has {duplicate_analysis['total_duplicates']} timestamps with multiple measurements.")
-                
-                # Show a sample of duplicate measurements
-                sample_duplicates = duplicate_analysis['duplicate_details'].head(5)
-                st.write("Sample of timestamps with multiple measurements:")
-                st.dataframe(sample_duplicates[['datetime', 'db_a']].sort_values('datetime'))
+                st.markdown(f"<div style='font-size: 0.9em;'><b>{key}:</b> {value}</div>", unsafe_allow_html=True)
     
     # Time series plot
     st.subheader("Time Series Analysis")
