@@ -256,7 +256,7 @@ def main():
                 
                 if closest_station and min_dist < 0.01:  # Threshold for considering a click "on" a marker
                     st.session_state.selected_station = closest_station
-                    st.experimental_rerun()
+                    st.rerun()
     
     with col2:
         st.subheader("Station Statistics")
