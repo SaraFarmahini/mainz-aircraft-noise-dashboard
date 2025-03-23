@@ -34,11 +34,9 @@ The map implementation uses Folium library with the following features:
   - University of Mainz (49.9900° N, 8.2700° E)
   - Mainz/Hechtsheim 2 (49.9700° N, 8.2900° E)
   - Mainz/Lerchenberg (49.9900° N, 8.2500° E)
-- Station marker colors based on average noise levels:
-  - Green: < 60 dB
-  - Yellow: 60-70 dB
-  - Orange: 70-80 dB
-  - Red: > 80 dB
+- Station marker colors:
+  - Selected station: Red marker
+  - Other stations: Blue markers
 - Click-to-select functionality with popup information showing:
   - Station name
   - Average noise level
