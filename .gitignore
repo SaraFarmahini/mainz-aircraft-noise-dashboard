@@ -37,5 +37,9 @@ Thumbs.db
 
 # Data files
 *.csv
-*.xlsx
-*.xls 
+merged_Mainz/
+*.ipynb
+*.html
+
+# Generated files
+noise_*.html 
