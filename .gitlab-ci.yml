@@ -1,0 +1,17 @@
+image: python:3.10
+
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  script:
+    - pip install streamlit
+    - streamlit run app.py
+  artifacts:
+    paths:
+      - .streamlit/
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "initial-code" 
