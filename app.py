@@ -27,7 +27,7 @@ STATION_COORDS = {
     'Mainz/Hechtsheim 1': (49.9700, 8.2900),
     'Mainz/Laubenheim': (49.9783, 8.2792),
     'Mainz/Bretzenheim': (49.9600, 8.2600),
-    'University of Mainz': (49.9900, 8.2700),
+    'Mainz/Universitätsmedizin': (49.9900, 8.2700),
     'Mainz/Hechtsheim 2': (49.9700, 8.2900),
     'Mainz/Lerchenberg': (49.9900, 8.2500)
 }
@@ -36,8 +36,6 @@ STATION_COORDS = {
 def load_data():
     df = pd.read_csv('cleaned_noise_data.csv')
     df['datetime'] = pd.to_datetime(df['datetime'])
-    # Update station name
-    df['station_name'] = df['station_name'].replace('Mainz/Universitätsmedizin', 'University of Mainz')
     return df
 
 def analyze_duplicates(df, station):
