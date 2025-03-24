@@ -89,12 +89,12 @@ def create_station_map(df, date_range):
         </div>
         """
         
-        # Add marker
+        # Add marker - all markers are red now
         folium.Marker(
             coords,
             popup=folium.Popup(popup_html, max_width=300),
             tooltip=station,
-            icon=folium.Icon(color='red' if station == st.session_state.selected_station else 'blue')
+            icon=folium.Icon(color='red')
         ).add_to(m)
     
     return m
