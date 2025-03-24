@@ -64,30 +64,37 @@ def analyze_duplicates(df, station):
 def create_station_map(df):
     # Create a map centered on Mainz using OpenStreetMap
     m = folium.Map(
-        location=[49.9925, 8.2473],
+        location=[49.9924, 8.2473],
         zoom_start=12,
         tiles='OpenStreetMap'
     )
     
     # Add markers for each station
     for station, coords in STATION_COORDS.items():
-        station_data = df[df['station_name'] == station]
-        avg_noise = station_data['db_a'].mean()
+        station_data = df[
+            (df['station_name'] == station) & 
+            (df['datetime'].dt.date >= date_range[0]) & 
+            (df['datetime'].dt.date <= date_range[1])
+        ]
         
-        # Create a custom popup with station info
+        # Calculate average noise level, handling NaN values
+        avg_noise = station_data['db_a'].mean()
+        avg_noise_str = f"{avg_noise:.1f}" if pd.notna(avg_noise) else "No data"
+        
         popup_html = f"""
-        <div style="font-family: Arial, sans-serif;">
+        <div style='font-family: Arial, sans-serif;'>
             <h4>{station}</h4>
-            <p>Average Aircraft Noise: {avg_noise:.1f} dB</p>
+            <p>Average Aircraft Noise: {avg_noise_str} dB</p>
+            <p>Total Records: {len(station_data):,}</p>
         </div>
         """
         
-        # Add marker with custom icon and popup
+        # Add marker
         folium.Marker(
             coords,
             popup=folium.Popup(popup_html, max_width=300),
             tooltip=station,
-            icon=folium.Icon(color='red', icon='info-sign')
+            icon=folium.Icon(color='red' if station == st.session_state.selected_station else 'blue')
         ).add_to(m)
     
     return m
