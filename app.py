@@ -61,7 +61,7 @@ def analyze_duplicates(df, station):
         }
     return None
 
-def create_station_map(df):
+def create_station_map(df, date_range):
     # Create a map centered on Mainz using OpenStreetMap
     m = folium.Map(
         location=[49.9924, 8.2473],
@@ -235,7 +235,7 @@ def main():
     
     with col1:
         st.subheader("Station Locations")
-        station_map = create_station_map(df)
+        station_map = create_station_map(df, date_range)
         # Use st_folium with returned_objects to handle clicks
         map_data = st_folium(
             station_map,
