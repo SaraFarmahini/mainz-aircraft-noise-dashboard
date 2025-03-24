@@ -97,7 +97,7 @@ The map implementation uses Folium library with the following features:
 
 ## Deployment
 The application is deployed on:
-1. Streamlit Cloud (public access)
+1. Streamlit Cloud (public access): https://kqypzc9uauj88fqcmfv2ga.streamlit.app
 2. GitHub repository: https://github.com/SaraFarmahini/mainz-aircraft-noise-dashboard
 3. DFKI GitLab repository: https://git.opendfki.de/sara.farmahini/mainz-aircraft-noise-dashboard
 
