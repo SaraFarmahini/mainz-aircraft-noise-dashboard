@@ -34,8 +34,12 @@ STATION_COORDS = {
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv('cleaned_noise_data.csv')
+    # Read CSV with UTF-8 encoding and handle encoding errors
+    df = pd.read_csv('cleaned_noise_data.csv', encoding='utf-8', encoding_errors='replace')
     df['datetime'] = pd.to_datetime(df['datetime'])
+    
+    # Fix the encoding for the station name
+    df['station_name'] = df['station_name'].replace('Mainz/Universitätsmedizin', 'Mainz/Universitätsmedizin')
     return df
 
 def analyze_duplicates(df, station):
