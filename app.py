@@ -34,13 +34,31 @@ STATION_COORDS = {
 
 @st.cache_data
 def load_data():
-    # Read CSV with latin1 encoding to handle special characters
-    df = pd.read_csv('cleaned_noise_data.csv', encoding='latin1')
-    df['datetime'] = pd.to_datetime(df['datetime'])
-    
-    # Fix the encoding for the station name
-    df['station_name'] = df['station_name'].str.replace('Universit\xef\xbf\xbdtsmedizin', 'Universitätsmedizin', regex=False)
-    return df
+    try:
+        # Try reading with different encodings
+        try:
+            df = pd.read_csv('cleaned_noise_data.csv', encoding='utf-8')
+        except UnicodeDecodeError:
+            try:
+                df = pd.read_csv('cleaned_noise_data.csv', encoding='latin1')
+            except UnicodeDecodeError:
+                df = pd.read_csv('cleaned_noise_data.csv', encoding='cp1252')
+        
+        df['datetime'] = pd.to_datetime(df['datetime'])
+        
+        # Normalize station names to handle encoding issues
+        station_mapping = {
+            'Mainz/Universit\xef\xbf\xbdtsmedizin': 'Mainz/Universitätsmedizin',
+            'Mainz/Universitätsmedizin': 'Mainz/Universitätsmedizin',
+            'Mainz/Universit?tsmedizin': 'Mainz/Universitätsmedizin',
+            'Mainz/Universitï¿½tsmedizin': 'Mainz/Universitätsmedizin'
+        }
+        
+        df['station_name'] = df['station_name'].replace(station_mapping)
+        return df
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)}")
+        return pd.DataFrame()  # Return empty DataFrame instead of stopping
 
 def analyze_duplicates(df, station):
     """Analyze duplicate measurements for a station"""
