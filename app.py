@@ -187,6 +187,48 @@ def create_heatmap(df, selected_station, date_range):
         st.error(f"Error creating heatmap: {str(e)}")
         return None
 
+def create_monthly_plot(df, selected_station, date_range):
+    try:
+        # Filter data for selected station and date range
+        mask = (df['station_name'] == selected_station) & \
+               (df['datetime'] >= date_range[0]) & \
+               (df['datetime'] <= date_range[1])
+        filtered_df = df[mask]
+        
+        if filtered_df.empty:
+            st.warning(f"No data available for {selected_station} in the selected date range")
+            return None
+        
+        # Calculate monthly averages
+        monthly_avg = filtered_df.groupby(
+            filtered_df['datetime'].dt.to_period('M')
+        )['db_a'].mean().reset_index()
+        
+        monthly_avg['datetime'] = monthly_avg['datetime'].astype(str)
+        
+        # Create monthly plot
+        fig = px.line(
+            monthly_avg,
+            x='datetime',
+            y='db_a',
+            title=f'Monthly Average Aircraft Noise Levels at {selected_station}',
+            labels={'db_a': 'Average Noise Level (dB)', 'datetime': 'Month'},
+            template='plotly_white'
+        )
+        
+        fig.update_layout(
+            hovermode='x unified',
+            showlegend=False,
+            height=400,
+            xaxis_title='Month',
+            yaxis_title='Average Noise Level (dB)'
+        )
+        
+        return fig
+    except Exception as e:
+        st.error(f"Error creating monthly plot: {str(e)}")
+        return None
+
 def analyze_duplicates(df, station):
     try:
         # Filter data for selected station
@@ -292,6 +334,12 @@ def main():
     fig_ts = create_time_series(df, selected_station, date_range)
     if fig_ts:
         st.plotly_chart(fig_ts, use_container_width=True)
+    
+    # Monthly averages plot
+    st.subheader("Monthly Average Analysis")
+    fig_monthly = create_monthly_plot(df, selected_station, date_range)
+    if fig_monthly:
+        st.plotly_chart(fig_monthly, use_container_width=True)
     
     # Heatmap
     st.subheader("Daily Pattern Heatmap")
