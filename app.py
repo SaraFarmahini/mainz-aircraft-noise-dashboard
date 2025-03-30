@@ -49,7 +49,7 @@ def load_data():
                 continue
         
         if df is None:
-            st.error("Could not read the data file with any supported encoding")
+            st.error("Could not read the noise data file with any supported encoding")
             return pd.DataFrame()
         
         df['datetime'] = pd.to_datetime(df['datetime'])
@@ -65,14 +65,43 @@ def load_data():
         df['station_name'] = df['station_name'].replace(station_mapping)
         return df
     except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
+        st.error(f"Error loading noise data: {str(e)}")
         return pd.DataFrame()
 
 @st.cache_data
 def load_weather_data():
     try:
-        # Read cleaned weather data
-        weather_df = pd.read_csv('cleaned_weather_data.csv')
+        # First try to read the cleaned weather data
+        try:
+            weather_df = pd.read_csv('cleaned_weather_data.csv')
+        except Exception as e:
+            st.warning("Could not read cleaned weather data, trying to read from original file")
+            # If that fails, read and clean the original weather data
+            weather_df = pd.read_csv('dwd/final_merged_data.csv')
+            
+            # Convert date column to datetime
+            weather_df['datetime'] = pd.to_datetime(weather_df['MESS_DATUM'])
+            
+            # Select relevant columns and rename them
+            weather_df = weather_df[['datetime', 'TMK', 'UPM']].rename(columns={
+                'TMK': 'temperature',
+                'UPM': 'humidity'
+            })
+            
+            # Replace -999 with NaN
+            weather_df = weather_df.replace(-999, np.nan)
+            
+            # Drop rows where both temperature and humidity are NaN
+            weather_df = weather_df.dropna(subset=['temperature', 'humidity'], how='all')
+            
+            # Forward fill missing values (use the last valid value)
+            weather_df = weather_df.ffill()
+            
+            # If there are still missing values at the start, backward fill them
+            weather_df = weather_df.bfill()
+            
+            # Save the cleaned data
+            weather_df.to_csv('cleaned_weather_data.csv', index=False)
         
         # Convert datetime column
         weather_df['datetime'] = pd.to_datetime(weather_df['datetime'])
