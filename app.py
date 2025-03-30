@@ -6,6 +6,8 @@ import folium
 from streamlit_folium import folium_static
 from datetime import datetime, timedelta
 import numpy as np
+from scipy import stats
+import plotly.subplots as make_subplots
 
 # Set page config
 st.set_page_config(
@@ -270,6 +272,76 @@ def analyze_duplicates(df, station):
     except Exception as e:
         st.error(f"Error analyzing duplicates: {str(e)}")
 
+def create_correlation_analysis(df, selected_station, date_range):
+    try:
+        st.subheader("Correlation Analysis with Hospital Admissions")
+        
+        # Add disclaimer about correlation vs causation
+        st.info("""
+        ⚠️ **Important Note**: This analysis shows correlations between noise levels and hospital admissions. 
+        Correlation does not necessarily imply causation. Many factors can influence both noise levels and hospital admissions.
+        """)
+        
+        # Placeholder for hospital admissions data
+        st.warning("""
+        Hospital admissions data is not yet available. Once available, this section will show:
+        1. Time series correlation between noise peaks and admissions
+        2. Regional correlation analysis
+        3. Hourly/daily pattern correlation
+        4. Statistical significance tests
+        """)
+        
+        # Add example visualization structure
+        fig = make_subplots(rows=2, cols=1, 
+                          subplot_titles=('Noise Levels', 'Hospital Admissions (placeholder)'),
+                          vertical_spacing=0.15)
+        
+        # Add noise data
+        mask = (df['station_name'] == selected_station) & \
+               (df['datetime'] >= date_range[0]) & \
+               (df['datetime'] <= date_range[1])
+        filtered_df = df[mask]
+        
+        fig.add_trace(
+            go.Scatter(x=filtered_df['datetime'], y=filtered_df['db_a'],
+                      name='Noise Level', line=dict(color='red')),
+            row=1, col=1
+        )
+        
+        # Add placeholder for admissions data
+        fig.add_trace(
+            go.Scatter(x=filtered_df['datetime'], y=np.zeros(len(filtered_df)),
+                      name='Admissions (placeholder)', line=dict(color='blue')),
+            row=2, col=1
+        )
+        
+        fig.update_layout(
+            height=600,
+            showlegend=True,
+            title_text="Correlation Analysis (Example)",
+            template='plotly_white'
+        )
+        
+        fig.update_xaxes(title_text="Time", row=1, col=1)
+        fig.update_xaxes(title_text="Time", row=2, col=1)
+        fig.update_yaxes(title_text="Noise Level (dB)", row=1, col=1)
+        fig.update_yaxes(title_text="Number of Admissions", row=2, col=1)
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Add placeholder for statistical analysis
+        st.subheader("Statistical Analysis")
+        st.write("""
+        Once hospital admissions data is available, this section will show:
+        1. Pearson correlation coefficient between noise levels and admissions
+        2. P-value for statistical significance
+        3. Regional correlation analysis
+        4. Time-lag analysis to identify potential delayed effects
+        """)
+        
+    except Exception as e:
+        st.error(f"Error in correlation analysis: {str(e)}")
+
 def main():
     st.title("✈️ Mainz Aircraft Noise Monitoring Dashboard")
     
@@ -351,6 +423,10 @@ def main():
     if st.checkbox("Show Duplicate Analysis"):
         st.subheader("Duplicate Analysis")
         analyze_duplicates(df, selected_station)
+
+    # Add correlation analysis section
+    st.markdown("---")
+    create_correlation_analysis(df, selected_station, date_range)
 
 if __name__ == "__main__":
     main() 
