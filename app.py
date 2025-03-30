@@ -83,6 +83,18 @@ def load_weather_data():
             'UPM': 'humidity'
         })
         
+        # Replace -999 with NaN
+        weather_df = weather_df.replace(-999, np.nan)
+        
+        # Drop rows where both temperature and humidity are NaN
+        weather_df = weather_df.dropna(subset=['temperature', 'humidity'], how='all')
+        
+        # Forward fill missing values (use the last valid value)
+        weather_df = weather_df.fillna(method='ffill')
+        
+        # If there are still missing values at the start, backward fill them
+        weather_df = weather_df.fillna(method='bfill')
+        
         return weather_df
     except Exception as e:
         st.error(f"Error loading weather data: {str(e)}")
