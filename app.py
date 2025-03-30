@@ -3,13 +3,13 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import folium
-from streamlit_folium import st_folium
-from datetime import datetime
+from streamlit_folium import folium_static
+from datetime import datetime, timedelta
 import numpy as np
 
 # Set page config
 st.set_page_config(
-    page_title="Mainz Aircraft Noise Monitoring Dashboard",
+    page_title="Mainz Aircraft Noise Dashboard",
     page_icon="✈️",
     layout="wide"
 )
@@ -36,13 +36,19 @@ STATION_COORDS = {
 def load_data():
     try:
         # Try reading with different encodings
-        try:
-            df = pd.read_csv('cleaned_noise_data.csv', encoding='utf-8')
-        except UnicodeDecodeError:
+        encodings = ['utf-8', 'latin1', 'cp1252']
+        df = None
+        
+        for encoding in encodings:
             try:
-                df = pd.read_csv('cleaned_noise_data.csv', encoding='latin1')
+                df = pd.read_csv('cleaned_noise_data.csv', encoding=encoding)
+                break
             except UnicodeDecodeError:
-                df = pd.read_csv('cleaned_noise_data.csv', encoding='cp1252')
+                continue
+        
+        if df is None:
+            st.error("Could not read the data file with any supported encoding")
+            return pd.DataFrame()
         
         df['datetime'] = pd.to_datetime(df['datetime'])
         
@@ -58,163 +64,169 @@ def load_data():
         return df
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")
-        return pd.DataFrame()  # Return empty DataFrame instead of stopping
+        return pd.DataFrame()
+
+def create_station_map(df, selected_station, date_range):
+    try:
+        # Calculate center of Mainz
+        center_lat = 49.9929
+        center_lon = 8.2473
+        
+        # Create base map
+        m = folium.Map(location=[center_lat, center_lon], zoom_start=12)
+        
+        # Filter data for selected date range
+        mask = (df['datetime'] >= date_range[0]) & (df['datetime'] <= date_range[1])
+        filtered_df = df[mask]
+        
+        # Add markers for each station
+        for station, coords in STATION_COORDS.items():
+            # Calculate average noise level for this station
+            station_data = filtered_df[filtered_df['station_name'] == station]
+            avg_noise = station_data['db_a'].mean() if not station_data.empty else 0
+            
+            # Create popup content
+            popup_content = f"""
+                <div style='font-family: Arial, sans-serif;'>
+                    <h4 style='margin: 0;'>{station}</h4>
+                    <p style='margin: 5px 0;'>Average Noise: {avg_noise:.1f} dB</p>
+                    <p style='margin: 5px 0;'>Total Records: {len(station_data)}</p>
+                </div>
+            """
+            
+            # Create marker
+            folium.Marker(
+                location=coords,
+                popup=folium.Popup(popup_content, max_width=300),
+                tooltip=station,
+                icon=folium.Icon(color='red', icon='info-sign')
+            ).add_to(m)
+        
+        return m
+    except Exception as e:
+        st.error(f"Error creating map: {str(e)}")
+        return None
+
+def create_time_series(df, selected_station, date_range):
+    try:
+        # Filter data for selected station and date range
+        mask = (df['station_name'] == selected_station) & \
+               (df['datetime'] >= date_range[0]) & \
+               (df['datetime'] <= date_range[1])
+        filtered_df = df[mask]
+        
+        if filtered_df.empty:
+            st.warning(f"No data available for {selected_station} in the selected date range")
+            return None
+        
+        # Create time series plot
+        fig = px.line(filtered_df, 
+                     x='datetime', 
+                     y='db_a',
+                     title=f'Aircraft Noise Levels at {selected_station}',
+                     labels={'db_a': 'Noise Level (dB)', 'datetime': 'Time'},
+                     template='plotly_white')
+        
+        fig.update_layout(
+            hovermode='x unified',
+            showlegend=False,
+            height=400
+        )
+        
+        return fig
+    except Exception as e:
+        st.error(f"Error creating time series plot: {str(e)}")
+        return None
+
+def create_heatmap(df, selected_station, date_range):
+    try:
+        # Filter data for selected station and date range
+        mask = (df['station_name'] == selected_station) & \
+               (df['datetime'] >= date_range[0]) & \
+               (df['datetime'] <= date_range[1])
+        filtered_df = df[mask]
+        
+        if filtered_df.empty:
+            st.warning(f"No data available for {selected_station} in the selected date range")
+            return None
+        
+        # Extract hour and day of week
+        filtered_df['hour'] = filtered_df['datetime'].dt.hour
+        filtered_df['day_of_week'] = filtered_df['datetime'].dt.day_name()
+        
+        # Create pivot table for heatmap
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        pivot_table = filtered_df.pivot_table(
+            values='db_a',
+            index='day_of_week',
+            columns='hour',
+            aggfunc='mean'
+        ).reindex(day_order)
+        
+        # Create heatmap
+        fig = go.Figure(data=go.Heatmap(
+            z=pivot_table.values,
+            x=pivot_table.columns,
+            y=pivot_table.index,
+            colorscale='RdYlBu_r',
+            colorbar_title='Noise Level (dB)',
+            text=np.round(pivot_table.values, 1),
+            texttemplate='%{text}',
+            textfont={"size": 8}
+        ))
+        
+        fig.update_layout(
+            title=f'Daily Noise Pattern at {selected_station}',
+            xaxis_title='Hour of Day',
+            yaxis_title='Day of Week',
+            height=500
+        )
+        
+        return fig
+    except Exception as e:
+        st.error(f"Error creating heatmap: {str(e)}")
+        return None
 
 def analyze_duplicates(df, station):
-    """Analyze duplicate measurements for a station"""
-    station_data = df[df['station_name'] == station].copy()
-    
-    # Find timestamps with multiple measurements
-    duplicates = station_data.groupby('datetime').size().reset_index(name='count')
-    duplicates = duplicates[duplicates['count'] > 1]
-    
-    if len(duplicates) > 0:
-        # Get detailed information about duplicates
-        duplicate_details = station_data[station_data['datetime'].isin(duplicates['datetime'])]
-        duplicate_details = duplicate_details.sort_values('datetime')
+    try:
+        # Filter data for selected station
+        station_data = df[df['station_name'] == station]
         
-        return {
-            'total_duplicates': len(duplicates),
-            'max_duplicates': duplicates['count'].max(),
-            'duplicate_timestamps': duplicates['datetime'].tolist(),
-            'duplicate_details': duplicate_details
-        }
-    return None
-
-def create_station_map(df, date_range):
-    # Create a map centered on Mainz using OpenStreetMap
-    m = folium.Map(
-        location=[49.9924, 8.2473],
-        zoom_start=12,
-        tiles='OpenStreetMap'
-    )
-    
-    # Add markers for each station
-    for station, coords in STATION_COORDS.items():
-        station_data = df[
-            (df['station_name'] == station) & 
-            (df['datetime'].dt.date >= date_range[0]) & 
-            (df['datetime'].dt.date <= date_range[1])
-        ]
+        # Find exact duplicates
+        exact_duplicates = station_data[station_data.duplicated(subset=['datetime'], keep=False)]
         
-        # Calculate average noise level, handling NaN values
-        avg_noise = station_data['db_a'].mean()
-        avg_noise_str = f"{avg_noise:.1f}" if pd.notna(avg_noise) else "No data"
+        if len(exact_duplicates) > 0:
+            st.warning(f"Found {len(exact_duplicates)} exact duplicate records for {station}")
+            
+            # Show duplicate records
+            st.write("Duplicate Records:")
+            st.dataframe(exact_duplicates.sort_values('datetime'))
+            
+            # Calculate statistics for duplicates
+            st.write("Statistics for Duplicate Records:")
+            st.write(exact_duplicates['db_a'].describe())
+        else:
+            st.success(f"No exact duplicates found for {station}")
+            
+        # Find near-duplicates (within 1 second)
+        station_data['rounded_time'] = station_data['datetime'].dt.round('1S')
+        near_duplicates = station_data[station_data.duplicated(subset=['rounded_time'], keep=False)]
         
-        popup_html = f"""
-        <div style='font-family: Arial, sans-serif;'>
-            <h4>{station}</h4>
-            <p>Average Aircraft Noise: {avg_noise_str} dB</p>
-            <p>Total Records: {len(station_data):,}</p>
-        </div>
-        """
-        
-        # Add marker - all markers are red now
-        folium.Marker(
-            coords,
-            popup=folium.Popup(popup_html, max_width=300),
-            tooltip=station,
-            icon=folium.Icon(color='red')
-        ).add_to(m)
-    
-    return m
-
-def plot_station_timeseries(df, station, start_date, end_date):
-    # Convert date objects to datetime
-    start_datetime = pd.to_datetime(start_date)
-    end_datetime = pd.to_datetime(end_date)
-    
-    station_data = df[
-        (df['station_name'] == station) & 
-        (df['datetime'] >= start_datetime) & 
-        (df['datetime'] <= end_datetime)
-    ].copy()
-    
-    if len(station_data) == 0:
-        # Create an empty figure with a message
-        fig = go.Figure()
-        fig.add_annotation(
-            text=f"No data available for {station} between {start_date} and {end_date}",
-            xref="paper",
-            yref="paper",
-            x=0.5,
-            y=0.5,
-            showarrow=False,
-            font=dict(size=16)
-        )
-        fig.update_layout(
-            title=f'Aircraft Noise Levels Over Time - {station}',
-            template='plotly_white',
-            showlegend=False,
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
-        )
-        return fig
-    
-    fig = px.line(
-        station_data,
-        x='datetime',
-        y='db_a',
-        title=f'Aircraft Noise Levels Over Time - {station}',
-        labels={'db_a': 'Aircraft Noise Level (dB)', 'datetime': 'Time'}
-    )
-    
-    fig.update_layout(
-        template='plotly_white',
-        hovermode='x unified'
-    )
-    
-    return fig
-
-def plot_station_heatmap(df, station):
-    station_data = df[df['station_name'] == station].copy()
-    
-    if len(station_data) == 0:
-        # Create an empty figure with a message
-        fig = go.Figure()
-        fig.add_annotation(
-            text=f"No data available for {station}",
-            xref="paper",
-            yref="paper",
-            x=0.5,
-            y=0.5,
-            showarrow=False,
-            font=dict(size=16)
-        )
-        fig.update_layout(
-            title=f'Aircraft Noise Pattern by Hour and Day - {station}',
-            template='plotly_white',
-            showlegend=False,
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
-        )
-        return fig
-    
-    station_data['hour'] = station_data['datetime'].dt.hour
-    station_data['day'] = station_data['datetime'].dt.day
-    
-    # Create heatmap
-    fig = px.density_heatmap(
-        station_data, 
-        x='day', 
-        y='hour',
-        title=f'Aircraft Noise Pattern by Hour and Day - {station}',
-        labels={'hour': 'Hour of Day', 'day': 'Day of Month'},
-        color_continuous_scale=['green', 'blue', 'yellow', 'purple']
-    )
-    
-    # Update y-axis to show 6-hour intervals
-    fig.update_layout(
-        yaxis=dict(
-            tickmode='array',
-            ticktext=['0:00', '6:00', '12:00', '18:00', '24:00'],
-            tickvals=[0, 6, 12, 18, 24],
-            title='Hour of Day'
-        ),
-        xaxis_title='Day of Month'
-    )
-    
-    return fig
+        if len(near_duplicates) > 0:
+            st.warning(f"Found {len(near_duplicates)} near-duplicate records (within 1 second) for {station}")
+            
+            # Show near-duplicate records
+            st.write("Near-Duplicate Records:")
+            st.dataframe(near_duplicates.sort_values('datetime'))
+            
+            # Calculate statistics for near-duplicates
+            st.write("Statistics for Near-Duplicate Records:")
+            st.write(near_duplicates['db_a'].describe())
+        else:
+            st.success(f"No near-duplicates found for {station}")
+            
+    except Exception as e:
+        st.error(f"Error analyzing duplicates: {str(e)}")
 
 def main():
     st.title("✈️ Mainz Aircraft Noise Monitoring Dashboard")
@@ -222,124 +234,75 @@ def main():
     # Load data
     df = load_data()
     
-    # Sidebar filters
-    st.sidebar.header("Filters")
+    if df.empty:
+        st.error("No data available. Please check the data file.")
+        return
     
-    # Get unique stations
+    # Sidebar controls
+    st.sidebar.header("Controls")
+    
+    # Station selection
     stations = sorted(df['station_name'].unique())
-    
-    # If no station is selected yet, use the first station as default
-    if st.session_state.selected_station is None:
-        st.session_state.selected_station = stations[0]
-    
     selected_station = st.sidebar.selectbox(
         "Select Station",
-        options=stations,
-        index=stations.index(st.session_state.selected_station),
-        key="station_selector"
+        stations,
+        index=stations.index('Mainz/Universitätsmedizin') if 'Mainz/Universitätsmedizin' in stations else 0
     )
     
-    # Update session state if station is changed in sidebar
-    if selected_station != st.session_state.selected_station:
-        st.session_state.selected_station = selected_station
-    
+    # Date range selection
+    min_date = df['datetime'].min()
+    max_date = df['datetime'].max()
     date_range = st.sidebar.date_input(
         "Select Date Range",
-        value=(df['datetime'].min().date(), df['datetime'].max().date()),
-        min_value=df['datetime'].min().date(),
-        max_value=df['datetime'].max().date()
+        value=(min_date, max_date),
+        min_value=min_date.date(),
+        max_value=max_date.date()
     )
+    
+    # Convert date_range to datetime
+    date_range = (datetime.combine(date_range[0], datetime.min.time()),
+                 datetime.combine(date_range[1], datetime.max.time()))
     
     # Main content
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.subheader("Station Locations")
-        station_map = create_station_map(df, date_range)
-        # Use st_folium with returned_objects to handle clicks
-        map_data = st_folium(
-            station_map,
-            width=800,
-            height=400,
-            returned_objects=["last_clicked"]
-        )
-        
-        # Handle map clicks safely
-        if map_data and map_data.get('last_clicked'):
-            clicked_lat = map_data['last_clicked'].get('lat')
-            clicked_lng = map_data['last_clicked'].get('lng')
-            
-            if clicked_lat is not None and clicked_lng is not None:
-                # Find the closest station to the clicked point
-                min_dist = float('inf')
-                closest_station = None
-                
-                for station, coords in STATION_COORDS.items():
-                    dist = ((coords[0] - clicked_lat) ** 2 + (coords[1] - clicked_lng) ** 2) ** 0.5
-                    if dist < min_dist:
-                        min_dist = dist
-                        closest_station = station
-                
-                if closest_station and min_dist < 0.01:  # Threshold for considering a click "on" a marker
-                    st.session_state.selected_station = closest_station
-                    st.rerun()
+        st.subheader("Interactive Map")
+        m = create_station_map(df, selected_station, date_range)
+        if m:
+            folium_static(m, width=800, height=500)
     
     with col2:
         st.subheader("Station Statistics")
-        station_data = df[
-            (df['station_name'] == st.session_state.selected_station) & 
-            (df['datetime'].dt.date >= date_range[0]) & 
-            (df['datetime'].dt.date <= date_range[1])
-        ]
+        # Filter data for selected station and date range
+        mask = (df['station_name'] == selected_station) & \
+               (df['datetime'] >= date_range[0]) & \
+               (df['datetime'] <= date_range[1])
+        station_data = df[mask]
         
-        if len(station_data) == 0:
-            st.warning(f"No data available for {st.session_state.selected_station} between {date_range[0]} and {date_range[1]}")
+        if not station_data.empty:
+            st.metric("Average Aircraft Noise", f"{station_data['db_a'].mean():.1f} dB")
+            st.metric("Maximum Noise Level", f"{station_data['db_a'].max():.1f} dB")
+            st.metric("Total Records", f"{len(station_data):,}")
         else:
-            stats = {
-                "Average Aircraft Noise": f"{station_data['db_a'].mean():.1f} dB",
-                "Maximum Aircraft Noise": f"{station_data['db_a'].max():.1f} dB",
-                "Minimum Aircraft Noise": f"{station_data['db_a'].min():.1f} dB",
-                "Total Records": f"{len(station_data):,}",
-                "Date Range": f"{station_data['datetime'].min().strftime('%Y-%m-%d')} to {station_data['datetime'].max().strftime('%Y-%m-%d')}"
-            }
-            
-            for key, value in stats.items():
-                st.markdown(f"<div style='font-size: 0.9em;'><b>{key}:</b> {value}</div>", unsafe_allow_html=True)
+            st.warning("No data available for the selected station and date range")
     
     # Time series plot
     st.subheader("Time Series Analysis")
-    fig_ts = plot_station_timeseries(df, st.session_state.selected_station, date_range[0], date_range[1])
-    st.plotly_chart(fig_ts, use_container_width=True)
+    fig_ts = create_time_series(df, selected_station, date_range)
+    if fig_ts:
+        st.plotly_chart(fig_ts, use_container_width=True)
     
     # Heatmap
-    st.subheader("Daily Pattern Analysis")
-    fig_hm = plot_station_heatmap(df, st.session_state.selected_station)
-    st.plotly_chart(fig_hm, use_container_width=True)
+    st.subheader("Daily Pattern Heatmap")
+    fig_hm = create_heatmap(df, selected_station, date_range)
+    if fig_hm:
+        st.plotly_chart(fig_hm, use_container_width=True)
     
-    # Monthly averages
-    st.subheader("Monthly Average Aircraft Noise Levels")
-    monthly_data = df[df['station_name'] == st.session_state.selected_station].copy()
-    
-    if len(monthly_data) == 0:
-        st.warning(f"No data available for {st.session_state.selected_station}")
-    else:
-        monthly_avg = monthly_data.groupby(
-            monthly_data['datetime'].dt.to_period('M')
-        )['db_a'].mean().reset_index()
-        
-        monthly_avg['datetime'] = monthly_avg['datetime'].astype(str)
-        fig_monthly = px.line(
-            monthly_avg,
-            x='datetime',
-            y='db_a',
-            title=f'Monthly Average Aircraft Noise Levels - {st.session_state.selected_station}',
-            labels={'db_a': 'Average Aircraft Noise Level (dB)', 'datetime': 'Month'}
-        )
-        st.plotly_chart(fig_monthly, use_container_width=True)
-    
-    # Add reference to DFLD
-    st.markdown("---")
-    st.markdown("Reference: Data source: [Deutscher Fluglärmdienst e.V.](https://www.dfld.de/DFLDindex.php?L=G)")
+    # Duplicate analysis
+    if st.checkbox("Show Duplicate Analysis"):
+        st.subheader("Duplicate Analysis")
+        analyze_duplicates(df, selected_station)
 
 if __name__ == "__main__":
     main() 
