@@ -71,29 +71,11 @@ def load_data():
 @st.cache_data
 def load_weather_data():
     try:
-        # Read weather data
-        weather_df = pd.read_csv('dwd/final_merged_data.csv')
+        # Read cleaned weather data
+        weather_df = pd.read_csv('cleaned_weather_data.csv')
         
-        # Convert date column to datetime
-        weather_df['datetime'] = pd.to_datetime(weather_df['MESS_DATUM'])
-        
-        # Select relevant columns and rename them
-        weather_df = weather_df[['datetime', 'TMK', 'UPM']].rename(columns={
-            'TMK': 'temperature',
-            'UPM': 'humidity'
-        })
-        
-        # Replace -999 with NaN
-        weather_df = weather_df.replace(-999, np.nan)
-        
-        # Drop rows where both temperature and humidity are NaN
-        weather_df = weather_df.dropna(subset=['temperature', 'humidity'], how='all')
-        
-        # Forward fill missing values (use the last valid value)
-        weather_df = weather_df.fillna(method='ffill')
-        
-        # If there are still missing values at the start, backward fill them
-        weather_df = weather_df.fillna(method='bfill')
+        # Convert datetime column
+        weather_df['datetime'] = pd.to_datetime(weather_df['datetime'])
         
         return weather_df
     except Exception as e:

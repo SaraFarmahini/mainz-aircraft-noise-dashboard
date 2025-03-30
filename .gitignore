@@ -37,9 +37,14 @@ Thumbs.db
 
 # Data files
 *.csv
+!cleaned_weather_data.csv
 merged_Mainz/
 *.ipynb
 *.html
+*.xlsx
+*.xls
 
 # Generated files
-noise_*.html 
+noise_*.html
+static_plots/
+generate_plots.py 
