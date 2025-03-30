@@ -6,7 +6,7 @@ import folium
 from streamlit_folium import folium_static
 from datetime import datetime, timedelta
 import numpy as np
-from scipy import stats
+from scipy.stats import pearsonr
 import plotly.subplots as make_subplots
 
 # Set page config
@@ -365,10 +365,10 @@ def create_correlation_analysis(df, weather_df, selected_station, date_range):
         
         with col1:
             # Noise vs Temperature
-            temp_corr = stats.pearsonr(daily_data['db_a'], daily_data['temperature'])
+            temp_corr, temp_p = pearsonr(daily_data['db_a'], daily_data['temperature'])
             st.metric("Noise vs Temperature Correlation", 
-                     f"{temp_corr[0]:.3f}",
-                     f"p-value: {temp_corr[1]:.3f}")
+                     f"{temp_corr:.3f}",
+                     f"p-value: {temp_p:.3f}")
             
             # Create scatter plot
             fig_temp = px.scatter(daily_data, 
@@ -381,10 +381,10 @@ def create_correlation_analysis(df, weather_df, selected_station, date_range):
         
         with col2:
             # Noise vs Humidity
-            hum_corr = stats.pearsonr(daily_data['db_a'], daily_data['humidity'])
+            hum_corr, hum_p = pearsonr(daily_data['db_a'], daily_data['humidity'])
             st.metric("Noise vs Humidity Correlation", 
-                     f"{hum_corr[0]:.3f}",
-                     f"p-value: {hum_corr[1]:.3f}")
+                     f"{hum_corr:.3f}",
+                     f"p-value: {hum_p:.3f}")
             
             # Create scatter plot
             fig_hum = px.scatter(daily_data, 
@@ -435,6 +435,7 @@ def create_correlation_analysis(df, weather_df, selected_station, date_range):
         
     except Exception as e:
         st.error(f"Error in correlation analysis: {str(e)}")
+        st.error("Please check if the data contains valid values for correlation analysis.")
 
 def main():
     st.title("✈️ Mainz Aircraft Noise Monitoring Dashboard")
