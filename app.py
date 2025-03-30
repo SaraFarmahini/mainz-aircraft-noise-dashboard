@@ -68,6 +68,26 @@ def load_data():
         st.error(f"Error loading data: {str(e)}")
         return pd.DataFrame()
 
+@st.cache_data
+def load_weather_data():
+    try:
+        # Read weather data
+        weather_df = pd.read_csv('dwd/final_merged_data.csv')
+        
+        # Convert date column to datetime
+        weather_df['datetime'] = pd.to_datetime(weather_df['MESS_DATUM'])
+        
+        # Select relevant columns and rename them
+        weather_df = weather_df[['datetime', 'TMK', 'UPM']].rename(columns={
+            'TMK': 'temperature',
+            'UPM': 'humidity'
+        })
+        
+        return weather_df
+    except Exception as e:
+        st.error(f"Error loading weather data: {str(e)}")
+        return pd.DataFrame()
+
 def create_station_map(df, selected_station, date_range):
     try:
         # Calculate center of Mainz
@@ -272,72 +292,152 @@ def analyze_duplicates(df, station):
     except Exception as e:
         st.error(f"Error analyzing duplicates: {str(e)}")
 
-def create_correlation_analysis(df, selected_station, date_range):
+def create_correlation_analysis(df, weather_df, selected_station, date_range):
     try:
-        st.subheader("Correlation Analysis with Hospital Admissions")
+        st.subheader("Environmental Factors Analysis")
         
         # Add disclaimer about correlation vs causation
         st.info("""
-        ⚠️ **Important Note**: This analysis shows correlations between noise levels and hospital admissions. 
-        Correlation does not necessarily imply causation. Many factors can influence both noise levels and hospital admissions.
+        ⚠️ **Important Note**: This analysis shows correlations between environmental factors and noise levels. 
+        Correlation does not necessarily imply causation. Many factors can influence both variables.
         """)
         
-        # Placeholder for hospital admissions data
-        st.warning("""
-        Hospital admissions data is not yet available. Once available, this section will show:
-        1. Time series correlation between noise peaks and admissions
-        2. Regional correlation analysis
-        3. Hourly/daily pattern correlation
-        4. Statistical significance tests
-        """)
-        
-        # Add example visualization structure
-        fig = make_subplots(rows=2, cols=1, 
-                          subplot_titles=('Noise Levels', 'Hospital Admissions (placeholder)'),
-                          vertical_spacing=0.15)
-        
-        # Add noise data
-        mask = (df['station_name'] == selected_station) & \
-               (df['datetime'] >= date_range[0]) & \
-               (df['datetime'] <= date_range[1])
+        # Filter data for selected date range
+        mask = (df['datetime'] >= date_range[0]) & (df['datetime'] <= date_range[1])
         filtered_df = df[mask]
         
+        # Filter weather data for selected date range
+        weather_mask = (weather_df['datetime'] >= date_range[0]) & (weather_df['datetime'] <= date_range[1])
+        filtered_weather = weather_df[weather_mask]
+        
+        # Create subplots for environmental factors
+        fig = make_subplots(rows=3, cols=1, 
+                          subplot_titles=('Aircraft Noise Levels', 'Temperature', 'Humidity'),
+                          vertical_spacing=0.1)
+        
+        # Add noise data
         fig.add_trace(
             go.Scatter(x=filtered_df['datetime'], y=filtered_df['db_a'],
                       name='Noise Level', line=dict(color='red')),
             row=1, col=1
         )
         
-        # Add placeholder for admissions data
+        # Add temperature data
         fig.add_trace(
-            go.Scatter(x=filtered_df['datetime'], y=np.zeros(len(filtered_df)),
-                      name='Admissions (placeholder)', line=dict(color='blue')),
+            go.Scatter(x=filtered_weather['datetime'], y=filtered_weather['temperature'],
+                      name='Temperature', line=dict(color='orange')),
             row=2, col=1
         )
         
+        # Add humidity data
+        fig.add_trace(
+            go.Scatter(x=filtered_weather['datetime'], y=filtered_weather['humidity'],
+                      name='Humidity', line=dict(color='blue')),
+            row=3, col=1
+        )
+        
         fig.update_layout(
-            height=600,
+            height=800,
             showlegend=True,
-            title_text="Correlation Analysis (Example)",
+            title_text=f"Environmental Factors Analysis for {selected_station}",
             template='plotly_white'
         )
         
         fig.update_xaxes(title_text="Time", row=1, col=1)
         fig.update_xaxes(title_text="Time", row=2, col=1)
+        fig.update_xaxes(title_text="Time", row=3, col=1)
         fig.update_yaxes(title_text="Noise Level (dB)", row=1, col=1)
-        fig.update_yaxes(title_text="Number of Admissions", row=2, col=1)
+        fig.update_yaxes(title_text="Temperature (°C)", row=2, col=1)
+        fig.update_yaxes(title_text="Humidity (%)", row=3, col=1)
         
         st.plotly_chart(fig, use_container_width=True)
         
-        # Add placeholder for statistical analysis
-        st.subheader("Statistical Analysis")
-        st.write("""
-        Once hospital admissions data is available, this section will show:
-        1. Pearson correlation coefficient between noise levels and admissions
-        2. P-value for statistical significance
-        3. Regional correlation analysis
-        4. Time-lag analysis to identify potential delayed effects
-        """)
+        # Calculate daily averages for correlation analysis
+        daily_noise = filtered_df.groupby(filtered_df['datetime'].dt.date)['db_a'].mean().reset_index()
+        daily_weather = filtered_weather.groupby(filtered_weather['datetime'].dt.date).agg({
+            'temperature': 'mean',
+            'humidity': 'mean'
+        }).reset_index()
+        
+        # Merge daily data
+        daily_data = pd.merge(daily_noise, daily_weather, 
+                            left_on='datetime', 
+                            right_on='datetime', 
+                            how='inner')
+        
+        # Calculate correlations
+        st.subheader("Correlation Analysis")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Noise vs Temperature
+            temp_corr = stats.pearsonr(daily_data['db_a'], daily_data['temperature'])
+            st.metric("Noise vs Temperature Correlation", 
+                     f"{temp_corr[0]:.3f}",
+                     f"p-value: {temp_corr[1]:.3f}")
+            
+            # Create scatter plot
+            fig_temp = px.scatter(daily_data, 
+                                x='db_a', 
+                                y='temperature',
+                                title='Noise vs Temperature',
+                                labels={'db_a': 'Noise Level (dB)', 
+                                       'temperature': 'Temperature (°C)'})
+            st.plotly_chart(fig_temp, use_container_width=True)
+        
+        with col2:
+            # Noise vs Humidity
+            hum_corr = stats.pearsonr(daily_data['db_a'], daily_data['humidity'])
+            st.metric("Noise vs Humidity Correlation", 
+                     f"{hum_corr[0]:.3f}",
+                     f"p-value: {hum_corr[1]:.3f}")
+            
+            # Create scatter plot
+            fig_hum = px.scatter(daily_data, 
+                               x='db_a', 
+                               y='humidity',
+                               title='Noise vs Humidity',
+                               labels={'db_a': 'Noise Level (dB)', 
+                                      'humidity': 'Humidity (%)'})
+            st.plotly_chart(fig_hum, use_container_width=True)
+        
+        # Add seasonal analysis
+        st.subheader("Seasonal Analysis")
+        daily_data['month'] = pd.to_datetime(daily_data['datetime']).dt.month
+        monthly_avg = daily_data.groupby('month').agg({
+            'db_a': 'mean',
+            'temperature': 'mean',
+            'humidity': 'mean'
+        }).reset_index()
+        
+        fig_seasonal = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        fig_seasonal.add_trace(
+            go.Scatter(x=monthly_avg['month'], y=monthly_avg['db_a'],
+                      name='Average Noise', line=dict(color='red')),
+            secondary_y=False
+        )
+        
+        fig_seasonal.add_trace(
+            go.Scatter(x=monthly_avg['month'], y=monthly_avg['temperature'],
+                      name='Average Temperature', line=dict(color='orange')),
+            secondary_y=True
+        )
+        
+        fig_seasonal.update_layout(
+            title='Monthly Average Noise and Temperature',
+            xaxis_title='Month',
+            template='plotly_white'
+        )
+        
+        fig_seasonal.update_xaxes(ticktext=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                                tickvals=list(range(1, 13)))
+        
+        fig_seasonal.update_yaxes(title_text="Average Noise Level (dB)", secondary_y=False)
+        fig_seasonal.update_yaxes(title_text="Average Temperature (°C)", secondary_y=True)
+        
+        st.plotly_chart(fig_seasonal, use_container_width=True)
         
     except Exception as e:
         st.error(f"Error in correlation analysis: {str(e)}")
@@ -347,9 +447,14 @@ def main():
     
     # Load data
     df = load_data()
+    weather_df = load_weather_data()
     
     if df.empty:
-        st.error("No data available. Please check the data file.")
+        st.error("No noise data available. Please check the data file.")
+        return
+    
+    if weather_df.empty:
+        st.error("No weather data available. Please check the weather data file.")
         return
     
     # Sidebar controls
@@ -426,7 +531,7 @@ def main():
 
     # Add correlation analysis section
     st.markdown("---")
-    create_correlation_analysis(df, selected_station, date_range)
+    create_correlation_analysis(df, weather_df, selected_station, date_range)
 
 if __name__ == "__main__":
     main() 
