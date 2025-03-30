@@ -359,11 +359,18 @@ def create_correlation_analysis(df, weather_df, selected_station, date_range):
             'humidity': 'mean'
         }).reset_index()
         
+        # Debug information
+        st.write("Data shapes:")
+        st.write(f"Daily noise data shape: {daily_noise.shape}")
+        st.write(f"Daily weather data shape: {daily_weather.shape}")
+        
         # Merge daily data
         daily_data = pd.merge(daily_noise, daily_weather, 
                             left_on='datetime', 
                             right_on='datetime', 
                             how='inner')
+        
+        st.write(f"Merged data shape: {daily_data.shape}")
         
         if len(daily_data) < 2:
             st.warning("Not enough data points for correlation analysis")
@@ -376,40 +383,66 @@ def create_correlation_analysis(df, weather_df, selected_station, date_range):
         with col1:
             # Noise vs Temperature
             try:
-                temp_corr, temp_p = pearsonr(daily_data['db_a'].values, daily_data['temperature'].values)
-                st.metric("Noise vs Temperature Correlation", 
-                         f"{temp_corr:.3f}",
-                         f"p-value: {temp_p:.3f}")
+                # Convert to numpy arrays and ensure they're float type
+                noise_values = daily_data['db_a'].astype(float).values
+                temp_values = daily_data['temperature'].astype(float).values
                 
-                # Create scatter plot
-                fig_temp = px.scatter(daily_data, 
-                                    x='db_a', 
-                                    y='temperature',
-                                    title='Noise vs Temperature',
-                                    labels={'db_a': 'Noise Level (dB)', 
-                                           'temperature': 'Temperature (°C)'})
-                st.plotly_chart(fig_temp, use_container_width=True)
+                # Remove any NaN values
+                mask = ~(np.isnan(noise_values) | np.isnan(temp_values))
+                noise_values = noise_values[mask]
+                temp_values = temp_values[mask]
+                
+                if len(noise_values) > 1 and len(temp_values) > 1:
+                    temp_corr, temp_p = pearsonr(noise_values, temp_values)
+                    st.metric("Noise vs Temperature Correlation", 
+                             f"{temp_corr:.3f}",
+                             f"p-value: {temp_p:.3f}")
+                    
+                    # Create scatter plot
+                    fig_temp = px.scatter(daily_data, 
+                                        x='db_a', 
+                                        y='temperature',
+                                        title='Noise vs Temperature',
+                                        labels={'db_a': 'Noise Level (dB)', 
+                                               'temperature': 'Temperature (°C)'})
+                    st.plotly_chart(fig_temp, use_container_width=True)
+                else:
+                    st.warning("Not enough valid data points for temperature correlation")
             except Exception as e:
                 st.error(f"Error calculating temperature correlation: {str(e)}")
+                st.error(f"Data types: noise_values: {type(noise_values)}, temp_values: {type(temp_values)}")
         
         with col2:
             # Noise vs Humidity
             try:
-                hum_corr, hum_p = pearsonr(daily_data['db_a'].values, daily_data['humidity'].values)
-                st.metric("Noise vs Humidity Correlation", 
-                         f"{hum_corr:.3f}",
-                         f"p-value: {hum_p:.3f}")
+                # Convert to numpy arrays and ensure they're float type
+                noise_values = daily_data['db_a'].astype(float).values
+                hum_values = daily_data['humidity'].astype(float).values
                 
-                # Create scatter plot
-                fig_hum = px.scatter(daily_data, 
-                                   x='db_a', 
-                                   y='humidity',
-                                   title='Noise vs Humidity',
-                                   labels={'db_a': 'Noise Level (dB)', 
-                                          'humidity': 'Humidity (%)'})
-                st.plotly_chart(fig_hum, use_container_width=True)
+                # Remove any NaN values
+                mask = ~(np.isnan(noise_values) | np.isnan(hum_values))
+                noise_values = noise_values[mask]
+                hum_values = hum_values[mask]
+                
+                if len(noise_values) > 1 and len(hum_values) > 1:
+                    hum_corr, hum_p = pearsonr(noise_values, hum_values)
+                    st.metric("Noise vs Humidity Correlation", 
+                             f"{hum_corr:.3f}",
+                             f"p-value: {hum_p:.3f}")
+                    
+                    # Create scatter plot
+                    fig_hum = px.scatter(daily_data, 
+                                       x='db_a', 
+                                       y='humidity',
+                                       title='Noise vs Humidity',
+                                       labels={'db_a': 'Noise Level (dB)', 
+                                              'humidity': 'Humidity (%)'})
+                    st.plotly_chart(fig_hum, use_container_width=True)
+                else:
+                    st.warning("Not enough valid data points for humidity correlation")
             except Exception as e:
                 st.error(f"Error calculating humidity correlation: {str(e)}")
+                st.error(f"Data types: noise_values: {type(noise_values)}, hum_values: {type(hum_values)}")
         
         # Add seasonal analysis
         st.subheader("Seasonal Analysis")
