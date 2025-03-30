@@ -296,13 +296,19 @@ def create_correlation_analysis(df, weather_df, selected_station, date_range):
         Correlation does not necessarily imply causation. Many factors can influence both variables.
         """)
         
-        # Filter data for selected date range
-        mask = (df['datetime'] >= date_range[0]) & (df['datetime'] <= date_range[1])
+        # Filter data for selected station and date range
+        mask = (df['station_name'] == selected_station) & \
+               (df['datetime'] >= date_range[0]) & \
+               (df['datetime'] <= date_range[1])
         filtered_df = df[mask]
         
         # Filter weather data for selected date range
         weather_mask = (weather_df['datetime'] >= date_range[0]) & (weather_df['datetime'] <= date_range[1])
         filtered_weather = weather_df[weather_mask]
+        
+        if filtered_df.empty or filtered_weather.empty:
+            st.warning("No data available for the selected station and date range")
+            return
         
         # Create subplots for environmental factors
         fig = make_subplots(rows=3, cols=1, 
@@ -359,41 +365,51 @@ def create_correlation_analysis(df, weather_df, selected_station, date_range):
                             right_on='datetime', 
                             how='inner')
         
+        if len(daily_data) < 2:
+            st.warning("Not enough data points for correlation analysis")
+            return
+        
         # Calculate correlations
         st.subheader("Correlation Analysis")
         col1, col2 = st.columns(2)
         
         with col1:
             # Noise vs Temperature
-            temp_corr, temp_p = pearsonr(daily_data['db_a'], daily_data['temperature'])
-            st.metric("Noise vs Temperature Correlation", 
-                     f"{temp_corr:.3f}",
-                     f"p-value: {temp_p:.3f}")
-            
-            # Create scatter plot
-            fig_temp = px.scatter(daily_data, 
-                                x='db_a', 
-                                y='temperature',
-                                title='Noise vs Temperature',
-                                labels={'db_a': 'Noise Level (dB)', 
-                                       'temperature': 'Temperature (°C)'})
-            st.plotly_chart(fig_temp, use_container_width=True)
+            try:
+                temp_corr, temp_p = pearsonr(daily_data['db_a'].values, daily_data['temperature'].values)
+                st.metric("Noise vs Temperature Correlation", 
+                         f"{temp_corr:.3f}",
+                         f"p-value: {temp_p:.3f}")
+                
+                # Create scatter plot
+                fig_temp = px.scatter(daily_data, 
+                                    x='db_a', 
+                                    y='temperature',
+                                    title='Noise vs Temperature',
+                                    labels={'db_a': 'Noise Level (dB)', 
+                                           'temperature': 'Temperature (°C)'})
+                st.plotly_chart(fig_temp, use_container_width=True)
+            except Exception as e:
+                st.error(f"Error calculating temperature correlation: {str(e)}")
         
         with col2:
             # Noise vs Humidity
-            hum_corr, hum_p = pearsonr(daily_data['db_a'], daily_data['humidity'])
-            st.metric("Noise vs Humidity Correlation", 
-                     f"{hum_corr:.3f}",
-                     f"p-value: {hum_p:.3f}")
-            
-            # Create scatter plot
-            fig_hum = px.scatter(daily_data, 
-                               x='db_a', 
-                               y='humidity',
-                               title='Noise vs Humidity',
-                               labels={'db_a': 'Noise Level (dB)', 
-                                      'humidity': 'Humidity (%)'})
-            st.plotly_chart(fig_hum, use_container_width=True)
+            try:
+                hum_corr, hum_p = pearsonr(daily_data['db_a'].values, daily_data['humidity'].values)
+                st.metric("Noise vs Humidity Correlation", 
+                         f"{hum_corr:.3f}",
+                         f"p-value: {hum_p:.3f}")
+                
+                # Create scatter plot
+                fig_hum = px.scatter(daily_data, 
+                                   x='db_a', 
+                                   y='humidity',
+                                   title='Noise vs Humidity',
+                                   labels={'db_a': 'Noise Level (dB)', 
+                                          'humidity': 'Humidity (%)'})
+                st.plotly_chart(fig_hum, use_container_width=True)
+            except Exception as e:
+                st.error(f"Error calculating humidity correlation: {str(e)}")
         
         # Add seasonal analysis
         st.subheader("Seasonal Analysis")
